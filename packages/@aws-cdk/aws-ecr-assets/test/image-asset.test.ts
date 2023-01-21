@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { describeDeprecated, testDeprecated } from '@aws-cdk/cdk-build-tools';
 import * as cxschema from '@aws-cdk/cloud-assembly-schema';
-import { App, DefaultStackSynthesizer, IgnoreMode, Lazy, LegacyStackSynthesizer, Stack, Stage } from '@aws-cdk/core';
+import { App, DefaultStackSynthesizer, DockerBuildSecret, IgnoreMode, Lazy, LegacyStackSynthesizer, Stack, Stage } from '@aws-cdk/core';
 import * as cxapi from '@aws-cdk/cx-api';
 import { DockerImageAsset } from '../lib';
 
@@ -122,6 +122,35 @@ describe('image asset', () => {
     expect(() => new DockerImageAsset(stack, 'MyAsset2', {
       directory: path.join(__dirname, 'demo-image'),
       buildArgs: { key: token },
+    })).toThrow(expected);
+  });
+
+  test('fails if using tokens in build secret keys or values', () => {
+    // GIVEN
+    const stack = new Stack();
+    const token = Lazy.string({ produce: () => 'foo' });
+    const expected = /Cannot use tokens in keys or values of "buildSecrets" since they are needed before deployment/;
+
+    // THEN
+    expect(() => new DockerImageAsset(stack, 'MyAsset1', {
+      directory: path.join(__dirname, 'demo-image'),
+      buildSecrets: {
+        [token]: DockerBuildSecret.fromEnv('NODE'),
+      },
+    })).toThrow(expected);
+
+    expect(() => new DockerImageAsset(stack, 'MyAsset2', {
+      directory: path.join(__dirname, 'demo-image'),
+      buildSecrets: {
+        mysecret: DockerBuildSecret.fromEnv(token),
+      },
+    })).toThrow(expected);
+
+    expect(() => new DockerImageAsset(stack, 'MyAsset3', {
+      directory: path.join(__dirname, 'demo-image'),
+      buildSecrets: {
+        mysecret: DockerBuildSecret.fromSrc(`partial${token}`),
+      },
     })).toThrow(expected);
   });
 

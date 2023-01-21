@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FingerprintOptions, FollowMode, IAsset } from '@aws-cdk/assets';
 import * as ecr from '@aws-cdk/aws-ecr';
-import { Annotations, AssetStaging, FeatureFlags, FileFingerprintOptions, IgnoreMode, Stack, SymlinkFollowMode, Token, Stage, CfnResource } from '@aws-cdk/core';
+import { Annotations, AssetStaging, FeatureFlags, FileFingerprintOptions, IgnoreMode, Stack, SymlinkFollowMode, Token, Stage, CfnResource, DockerBuildSecret } from '@aws-cdk/core';
 import * as cxapi from '@aws-cdk/cx-api';
 import { Construct } from 'constructs';
 
@@ -99,6 +99,13 @@ export interface DockerImageAssetInvalidationOptions {
   readonly buildArgs?: boolean;
 
   /**
+   * Use `buildSecrets` while calculating the asset hash
+   *
+   * @default true
+   */
+  readonly buildSecrets?: boolean;
+
+  /**
    * Use `target` while calculating the asset hash
    *
    * @default true
@@ -169,6 +176,15 @@ export interface DockerImageAssetOptions extends FingerprintOptions, FileFingerp
    * @default - no build args are passed
    */
   readonly buildArgs?: { [key: string]: string };
+
+  /**
+   * Build secrets.
+   *
+   * Docker BuildKit must enabled to use build secrets.
+   *
+   * @default - no build secrets
+   */
+  readonly buildSecrets?: { [key: string]: DockerBuildSecret }
 
   /**
    * Docker target to build to
@@ -283,6 +299,11 @@ export class DockerImageAsset extends Construct implements IAsset {
   private readonly dockerBuildArgs?: { [key: string]: string };
 
   /**
+   * Build secrets to pass to the `docker build` command.
+   */
+  private readonly dockerBuildSecrets?: { [key: string]: DockerBuildSecret };
+
+  /**
    * Outputs to pass to the `docker build` command.
    */
   private readonly dockerOutputs?: string[];
@@ -345,6 +366,7 @@ export class DockerImageAsset extends Construct implements IAsset {
     const extraHash: { [field: string]: any } = {};
     if (props.invalidation?.extraHash !== false && props.extraHash) { extraHash.user = props.extraHash; }
     if (props.invalidation?.buildArgs !== false && props.buildArgs) { extraHash.buildArgs = props.buildArgs; }
+    if (props.invalidation?.buildSecrets !== false && props.buildSecrets) { extraHash.buildSecrets = props.buildSecrets; }
     if (props.invalidation?.target !== false && props.target) { extraHash.target = props.target; }
     if (props.invalidation?.file !== false && props.file) { extraHash.file = props.file; }
     if (props.invalidation?.repositoryName !== false && props.repositoryName) { extraHash.repositoryName = props.repositoryName; }
@@ -374,12 +396,14 @@ export class DockerImageAsset extends Construct implements IAsset {
     const stack = Stack.of(this);
     this.assetPath = staging.relativeStagedPath(stack);
     this.dockerBuildArgs = props.buildArgs;
+    this.dockerBuildSecrets = props.buildSecrets;
     this.dockerBuildTarget = props.target;
     this.dockerOutputs = props.outputs;
 
     const location = stack.synthesizer.addDockerImageAsset({
       directoryName: this.assetPath,
       dockerBuildArgs: this.dockerBuildArgs,
+      dockerBuildSecrets: this.dockerBuildSecrets,
       dockerBuildTarget: this.dockerBuildTarget,
       dockerFile: props.file,
       sourceHash: staging.assetHash,
@@ -435,12 +459,21 @@ function validateProps(props: DockerImageAssetProps) {
   }
 
   validateBuildArgs(props.buildArgs);
+  validateBuildSecrets(props.buildSecrets);
 }
 
 function validateBuildArgs(buildArgs?: { [key: string]: string }) {
   for (const [key, value] of Object.entries(buildArgs || {})) {
     if (Token.isUnresolved(key) || Token.isUnresolved(value)) {
       throw new Error('Cannot use tokens in keys or values of "buildArgs" since they are needed before deployment');
+    }
+  }
+}
+
+function validateBuildSecrets(buildSecrets?: { [key: string]: DockerBuildSecret }) {
+  for (const [key, value] of Object.entries(buildSecrets || {})) {
+    if (Token.isUnresolved(key) || Token.isUnresolved(value)) {
+      throw new Error('Cannot use tokens in keys or values of "buildSecrets" since they are needed before deployment');
     }
   }
 }

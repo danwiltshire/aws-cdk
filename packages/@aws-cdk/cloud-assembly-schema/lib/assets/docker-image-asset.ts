@@ -1,3 +1,4 @@
+import { DockerBuildSecret } from '../../../core';
 import { AwsDestination } from './aws-destination';
 
 /**
@@ -62,6 +63,15 @@ export interface DockerImageSource {
    * @default - No additional build arguments
    */
   readonly dockerBuildArgs?: { [name: string]: string };
+
+  /**
+   * Build secrets.
+   *
+   * Docker BuildKit must enabled to use build secrets.
+   *
+   * @default - no build secrets
+   */
+  readonly dockerBuildSecrets?: { [key: string]: DockerBuildSecret }
 
   /**
    * Networking mode for the RUN commands during build. _Requires Docker Engine API v1.25+_.

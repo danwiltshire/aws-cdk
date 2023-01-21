@@ -2,7 +2,7 @@ import * as child_process from 'child_process';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as sinon from 'sinon';
-import { DockerImage, FileSystem } from '../lib';
+import { DockerBuildSecret, DockerImage, FileSystem } from '../lib';
 
 describe('bundling', () => {
   afterEach(() => {
@@ -63,6 +63,10 @@ describe('bundling', () => {
       buildArgs: {
         TEST_ARG: 'cdk-test',
       },
+      buildSecrets: {
+        mysecret: DockerBuildSecret.fromEnv('NODE'),
+        myothersecret: DockerBuildSecret.fromSrc('path.to.file.secret'),
+      },
     });
     image.run();
 
@@ -71,12 +75,18 @@ describe('bundling', () => {
       buildArgs: {
         TEST_ARG: 'cdk-test',
       },
+      buildSecrets: {
+        mysecret: DockerBuildSecret.fromEnv('NODE'),
+        myothersecret: DockerBuildSecret.fromSrc('path.to.file.secret'),
+      },
     })).digest('hex');
     const tag = `cdk-${tagHash}`;
 
     expect(spawnSyncStub.firstCall.calledWith('docker', [
       'build', '-t', tag,
       '--build-arg', 'TEST_ARG=cdk-test',
+      '--secret', 'id=mysecret,env=NODE',
+      '--secret', 'id=myothersecret,src=path.to.file.secret',
       'docker-path',
     ])).toEqual(true);
 
@@ -293,6 +303,16 @@ describe('bundling', () => {
       '--cool-entrypoint-arg',
       'cool', 'command',
     ], { stdio: ['ignore', process.stderr, 'inherit'] })).toEqual(true);
+  });
+
+  test('DockerBuildSecret methods return correct Docker syntax', () => {
+    // GIVEN
+    const fromEnv = DockerBuildSecret.fromEnv('NODE');
+    const fromSrc = DockerBuildSecret.fromSrc('path.json');
+
+    // THEN
+    expect(fromEnv).toEqual('env=NODE');
+    expect(fromSrc).toEqual('src=path.json');
   });
 
   test('cp utility copies from an image', () => {

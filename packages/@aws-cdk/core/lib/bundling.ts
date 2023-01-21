@@ -111,6 +111,33 @@ export interface BundlingOptions {
 }
 
 /**
+ * Methods to build Docker CLI arguments for builds using secrets.
+ *
+ * Docker BuildKit must be enabled to use build secrets.
+ */
+export class DockerBuildSecret {
+  /**
+   * A Docker build secret from an environment variable.
+   *
+   * Your build environment must be running Docker 20.10.
+   * @param environmentVariable The environment variable name
+   * @returns The latter half required for `--secret`
+   */
+  public static fromEnv(environmentVariable: string): string {
+    return `env=${environmentVariable}`;
+  }
+
+  /**
+   * A Docker build secret from a file source
+   * @param src The path to the source file, relative to the build directory.
+   * @returns The latter half required for `--secret`
+   */
+  public static fromSrc(src: string): string {
+    return `src=${src}`;
+  }
+}
+
+/**
  * The type of output that a bundling operation is producing.
  *
  */
@@ -277,6 +304,7 @@ export class DockerImage extends BundlingDockerImage {
    */
   public static fromBuild(path: string, options: DockerBuildOptions = {}) {
     const buildArgs = options.buildArgs || {};
+    const buildSecrets = options.buildSecrets || {};
 
     if (options.file && isAbsolute(options.file)) {
       throw new Error(`"file" must be relative to the docker build directory. Got ${options.file}`);
@@ -293,6 +321,7 @@ export class DockerImage extends BundlingDockerImage {
       ...(options.platform ? ['--platform', options.platform] : []),
       ...(options.targetStage ? ['--target', options.targetStage] : []),
       ...flatten(Object.entries(buildArgs).map(([k, v]) => ['--build-arg', `${k}=${v}`])),
+      ...flatten(Object.entries(buildSecrets).map(([k, v]) => ['--secret', `id=${k},${v}`])),
       path,
     ];
 
@@ -505,6 +534,15 @@ export interface DockerBuildOptions {
    * @default - no build args
    */
   readonly buildArgs?: { [key: string]: string };
+
+  /**
+   * Build secrets.
+   *
+   * Docker BuildKit must enabled to use build secrets.
+   *
+   * @default - no build secrets
+   */
+  readonly buildSecrets?: { [key: string]: DockerBuildSecret }
 
   /**
    * Name of the Dockerfile, must relative to the docker build path.

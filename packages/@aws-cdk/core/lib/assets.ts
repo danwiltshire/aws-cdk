@@ -1,4 +1,4 @@
-import { BundlingOptions } from './bundling';
+import { BundlingOptions, DockerBuildSecret } from './bundling';
 
 /**
  * Common interface for all assets.
@@ -173,6 +173,19 @@ export interface DockerImageAssetSource {
    * @default - no build args are passed
    */
   readonly dockerBuildArgs?: { [key: string]: string };
+
+  /**
+   * Build secrets to pass to the `docker build` command.
+   *
+   * Since Docker build arguments are resolved before deployment, keys and
+   * values cannot refer to unresolved tokens (such as `lambda.functionArn` or
+   * `queue.queueUrl`).
+   *
+   * Only allowed when `directoryName` is specified.
+   *
+   * @default - no build secrets are passed
+   */
+  readonly dockerBuildSecrets?: { [key: string]: DockerBuildSecret };
 
   /**
    * Docker target to build to

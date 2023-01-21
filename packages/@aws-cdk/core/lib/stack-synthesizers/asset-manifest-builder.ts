@@ -66,6 +66,7 @@ export class AssetManifestBuilder {
       directory: asset.directoryName,
       dockerBuildArgs: asset.dockerBuildArgs,
       dockerBuildTarget: asset.dockerBuildTarget,
+      dockerBuildSecrets: asset.dockerBuildSecrets,
       dockerFile: asset.dockerFile,
       networkMode: asset.networkMode,
       platform: asset.platform,

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { DockerBuildSecret } from '../../../@aws-cdk/core';
 import { cdkCredentialsConfig, obtainEcrCredentials } from './docker-credentials';
 import { Logger, shell, ShellOptions } from './shell';
 import { createCriticalSection } from './util';
@@ -14,6 +15,7 @@ interface BuildOptions {
   readonly tag: string;
   readonly target?: string;
   readonly file?: string;
+  readonly buildSecrets?: Record<string, DockerBuildSecret>;
   readonly buildArgs?: Record<string, string>;
   readonly networkMode?: string;
   readonly platform?: string;
@@ -54,6 +56,7 @@ export class Docker {
     const buildCommand = [
       'build',
       ...flatten(Object.entries(options.buildArgs || {}).map(([k, v]) => ['--build-arg', `${k}=${v}`])),
+      ...flatten(Object.entries(options.buildSecrets || {}).map(([k, v]) => ['--secret', `id=${k},${v}`])),
       '--tag', options.tag,
       ...options.target ? ['--target', options.target] : [],
       ...options.file ? ['--file', options.file] : [],

@@ -1,3 +1,5 @@
+import { DockerBuildSecret } from '../../../core';
+
 /**
  * Common properties for asset metadata.
  */
@@ -117,6 +119,15 @@ export interface ContainerImageAssetMetadataEntry extends BaseAssetMetadataEntry
    * @default no build args are passed
    */
   readonly buildArgs?: { [key: string]: string };
+
+  /**
+   * Build secrets.
+   *
+   * Docker BuildKit must enabled to use build secrets.
+   *
+   * @default - no build secrets
+   */
+  readonly buildSecrets?: { [key: string]: DockerBuildSecret }
 
   /**
    * Docker target to build to
