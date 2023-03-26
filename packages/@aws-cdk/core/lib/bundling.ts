@@ -21,6 +21,21 @@ export class DockerBuildSecret {
   public static fromSrc(src: string): string {
     return `src=${src}`;
   }
+
+  /**
+   * A Docker build secret from the build environment
+   * @param environmentVariable The environment variable name
+   * @returns The latter half required for `--secret`
+   */
+  public static fromEnvironment(environmentVariable: string): string {
+    const value = process.env[environmentVariable];
+
+    if (value) {
+      return `env=${environmentVariable}`;
+    } else {
+      throw new Error(`Environment variable ${environmentVariable} is not set`);
+    }
+  }
 }
 
 /**

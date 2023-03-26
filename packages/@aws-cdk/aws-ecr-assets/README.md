@@ -67,6 +67,10 @@ const asset = new DockerImageAsset(this, 'MyBuildImage', {
   buildArgs: {
     HTTP_PROXY: 'http://10.20.30.2:1234',
   },
+  buildSecrets: {
+    SECRET_FROM_ENV: DockerBuildSecret.fromEnvironment('PIP_INDEX_URL'),
+    SECRET_FROM_SRC: DockerBuildSecret.fromSrc('./secret.txt'),
+  },
   invalidation: {
     buildArgs: false,
   },
